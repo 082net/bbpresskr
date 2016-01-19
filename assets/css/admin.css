@@ -1,0 +1,147 @@
+/**
+ * 
+ * bbPressKR Admin style
+ * @package     bbPressKR
+ * 
+ */
+
+/*------------------------------------------------------------------------------
+  nav-tab from common.css;
+------------------------------------------------------------------------------*/
+.bbpkr-nav-tab {
+	border: 1px solid #ccc;
+	border-bottom: none;
+	background: #e4e4e4;
+	color: #555;
+	font-size: 12px;
+	line-height: 16px;
+	display: inline-block;
+	padding: 4px 9px 6px;
+	text-decoration: none;
+	margin: -4px 0px -1px 0;
+}
+
+.bbpkr-nav-tab:hover {
+	background-color: #fff;
+	color: #464646;
+}
+
+.bbpkr-nav-tab.ui-tabs-active {
+	color: #464646;
+}
+
+.bbpkr-nav-tab.ui-tabs-active,
+.bbpkr-nav-tab.ui-tabs-active:hover {
+	border-bottom: 1px solid #f1f1f1;
+	background: #f1f1f1;
+	border-bottom: 1px solid #fff;
+	background: #fff;
+	color: #000;
+}
+
+.bbpkr-nav-tabs {
+	border-bottom: 1px solid #ccc;
+	padding-bottom: 0;
+	padding-left: 10px;
+	margin: 0 0 0 0;
+}
+
+/*.bbpkr-nav-tabs .bbpkr-nav-tab {
+	padding: 6px 10px;
+	font-weight: bold;
+	font-size: 15px;
+	line-height: 24px;
+}*/
+
+.bbpkr-tab-content {
+	background: #f1f1f1;
+	background: #fff;
+}
+
+.bbpkr-tab-content table.form-table {
+	margin: 0 0 0 0;
+}
+
+/*------------------------------------------------------------------------------
+  11.1 - Custom Fields: from edit.css;
+------------------------------------------------------------------------------*/
+
+#bbpmetafields thead th {
+	padding: 5px 8px 8px;
+	background-color: #f1f1f1;
+}
+
+#postcustom #bbpmetafields .submit {
+	border: 0 none;
+	float: none;
+	padding: 0 8px 8px;
+}
+
+#side-sortables #postcustom #bbpmetafields .submit {
+	margin: 0;
+	padding: 0;
+}
+
+#side-sortables #postcustom #bbpmetafields #the-list textarea {
+	height: 85px;
+}
+
+#side-sortables #postcustom #bbpmetafields td.left input,
+#side-sortables #postcustom #bbpmetafields td.left select,
+#side-sortables #bbpmetafields #newmetaleft a {
+	margin: 3px 3px 0;
+}
+
+#bbpmetafields table {
+	margin: 0;
+	width: 100%;
+	border: 1px solid #dfdfdf;
+	border-spacing: 0;
+	background-color: #f9f9f9;
+}
+
+#bbpmetafields tr {
+	vertical-align: top;
+}
+
+#bbpmetafields table input,
+#bbpmetafields table select,
+#bbpmetafields table textarea {
+	width: 96%;
+	margin: 8px;
+}
+
+#side-sortables #bbpmetafields table input,
+#side-sortables #bbpmetafields table select,
+#side-sortables #bbpmetafields table textarea {
+	margin: 3px;
+}
+
+#bbpmetafields th.left,
+#bbpmetafields td.left {
+	width: 38%;
+}
+
+#bbpmetafields .submit input {
+	margin: 0;
+	width: auto;
+}
+
+#bbpmetafields #newmetaleft a {
+	display: inline-block;
+	margin: 0 8px 8px;
+	text-decoration: none;
+}
+
+.no-js #bbpmetafields #enternew {
+	display: none;
+}
+
+#post-body-content .compat-attachment-fields {
+	margin-bottom: 20px;
+}
+
+.compat-attachment-fields th {
+	padding-top: 5px;
+	padding-right: 10px;
+}

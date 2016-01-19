@@ -1,0 +1,698 @@
+<?php
+/*
+Plugin Name: Download Manager(Mod)
+Plugin URI: http://guff.szub.net/plugins/
+Description: Restrict and track downloads through WordPress. modified by <a href="http://082net.com/">082net</a>
+Version: R1.beta2_WP2(mod5)
+Author: Kaf Oseo
+Author URI: http://szub.net
+*//*
+	Copyright (c) 2005, Kaf Oseo (http://szub.net) & Cheon, Young-Min (http://082net.com)
+	Download Manager is released under the GPL license
+	http://www.gnu.org/licenses/gpl.txt
+
+	This is a WordPress plugin (http://wordpress.org).
+
+*//*
+Change Log :
+mod5 :
+	some small fixes.
+mod4 :
+	css and javascript for virtual file.
+	make it class.
+mod3 :
+	change default track plugin from SlimStat to Download-Manager
+mod2 : 
+	show filetype icons.
+	change folder name to 'x-download-mgr' to work with Wp-SlimStat.
+
+*//*
+BASIC INSTRUCTIONS
+Place download-mgr.php in the plugins directory, and activate under
+Plugins in WordPress. To configure, go to Manage > Downloads.
+
+Link to any file in your download directory using the following URL
+query format:
+
+	?dl=filename.ext
+
+Examples:
+
+	/blog/index.php?dl=test-program.zip
+	http://www.example.com/?dl=RedSox_2004_stats.sxc
+
+*/
+/* Added by 082net 
+
+ #Use <file> [file] Tag in Post ::
+<file>file1.zip</file> or [file]file1.zip[/file]
+
+#Examples:
+<file>download-this.zip</file> or  [file]download-this.zip[/file]  
+<file>file1.zip, file2.zip, file3.zip</file> (comma-separated-list)
+<file>test/file1.zip</file> (support files in subfolder of 'Download Path(url)'
+
+*/
+// user-configurable variable >
+// Set $this->tracking_type to have Download Manager use a single table to
+// track downloads, multiple tables (one per blog), or do not track.
+// Valid value: 'single', 'multiple', 'none'
+
+if(!class_exists('WP_DMGR')) :
+class WP_DMGR {
+	var $tracking_type = 'multiple';
+	var $htmltagset = false;
+	var $pluginURL, $conf, $failure_title;
+
+	function WP_DMGR() {
+		$basedir = dirname($this->_basename(__FILE__));
+		$this->pluginURL = get_option('siteurl') . '/wp-content/plugins/'.$basedir;
+		load_plugin_textdomain('download-mgr', 'wp-content/plugins/'.$basedir.'/lang'); // plugin localization
+		$this->conf = get_option('download_mgr');
+		$this->failure_title = __('Failed to download', 'download-mgr');
+		global $wpdb;
+		if('multiple' == $this->tracking_type)
+			$wpdb->downloads = $wpdb->prefix . 'downloads';
+		else
+			$wpdb->downloads = 'downloads';
+	}
+
+	function set_options() {
+		$option['path'] = ABSPATH . 'wp-content/uploads';
+		$option['url'] = get_option('siteurl') . '/wp-content/uploads';
+		$option['allowed_level'] = '0';
+		$option['show_msgs'] = 1;
+		$option['wrong_level_msg'] = __('Sorry, you don\'t have the right user level for downloads.', 'download-mgr');
+		$option['no_login_msg'] = __('You must be a ', 'download-mgr') . get_option('blogname') . __(' user and logged on to download.', 'download-mgr');
+		add_option('download_mgr', $option);
+	}
+
+	function _createTable() {
+		 global $wpdb;
+			
+		$createTable = $wpdb->downloads;
+		$myTableStatsQuery = "CREATE TABLE `$createTable` (
+			`id` INT UNSIGNED NOT NULL auto_increment,
+			`file_name` VARCHAR(255) NOT NULL default '',
+			`login` VARCHAR(60) default '',
+			`referer` TEXT default '',
+			`remote_addr` VARCHAR(40) default '',
+			`date` DATETIME NOT NULL default '0000-00-00 00:00:00',
+			PRIMARY KEY (id),
+			KEY file_name (`file_name`) )";
+
+		// Check if table is already there
+		foreach ($wpdb->get_col("SHOW TABLES", 0) as $table ) {
+			if ($table == $createTable) {
+				return false;
+			}
+		}
+		// Ok, let's proceed
+		if ( $wpdb->query( $myTableStatsQuery ) === false ) {
+			return false;
+		}
+		// Just to be sure, we check that tables were actually created
+		foreach ( $wpdb->get_col("SHOW TABLES", 0) as $table ) {
+			if ( $table == $createTable ) {
+				return true;
+			}
+		}	
+		return false;
+	}
+
+	function setup() {
+		if(!$this->conf) {
+			$this->set_options();
+		}
+		$this->_createTable();
+	}
+
+	function admin_head() {
+?>
+	<style type="text/css">
+	a.list_file {
+		display: block;
+		border-bottom: none;
+	}
+	a:hover.list_file {
+		color: #fff;
+		background-color: #69c;
+	}
+	table#downloads {
+		width: 100%;
+		border-collapse: collapse;
+	}
+	#downloads th, #downloads td {
+		font-size: 81.5%;
+		margin: 0;
+		padding: 4px;
+		border: 2px solid #fff;
+	}
+	#downloads th {
+		font-weight: bold;
+	}
+	#downloads th#count, #downloads th#login, #downloads th#filename, #downloads th#referer, #downloads th#ip {
+		width: auto;
+	}
+	#downloads th#timestamp {
+		width: 140px;
+	}
+	#downloads td div {
+		white-space: nowrap;
+		overflow: hidden;
+	}
+	.download_view a {
+		float: right;
+		top: 10px;
+		right: 10px;
+		font-size: .8em;
+		text-decoration: none;
+		display: block;
+		padding: 1px 4px 1px 4px;
+		border: none;
+	}
+	.download_view a:hover {
+		color: #fff;
+		background-color: #69c;
+	}
+	</style>
+	<script type="text/javascript">//<![CDATA[
+	function toggle(id) {
+		if (document.getElementById) {
+			var tags = document.getElementById(id);
+			tags.style.display = (tags.style.display == 'none') ? 'block' : 'none';
+		}
+	}//]]>
+	</script>
+<?php
+	}
+
+	function wp_head() {
+		echo '
+		<!--added by download-manager -->
+		<link rel="stylesheet" href="'.$this->pluginURL.'/dmgr.css" type="text/css" media="screen" />
+		';
+	}
+
+	function manager_page() {
+		global $user_level;
+		if(8 > $user_level) {
+			echo '<p>'.__('You do not have sufficient permissions to access this page.', 'download-mgr').'</p>';
+			return;
+		}
+		$levels = array(10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 'public');
+		$intervals = array(0, 15, 30, 60, 90, 120, 180, 300);
+		$test_download_option = $option;
+		$button_text = __('Update Settings', 'download-mgr');
+		$option = get_option('download_mgr');
+		if(isset($_POST['Submit'])) {
+			$option['path'] = trailingslashit(trim($_POST['path']));
+			$option['url'] = trailingslashit(trim($_POST['url']));
+			$option['allowed_level'] = (int) $_POST['allowed_level'];
+			$option['show_msgs'] = (int) $_POST['show_msgs'];
+			$option['wrong_level_msg'] = $_POST['wrong_level_msg'];
+			$option['no_login_msg'] = $_POST['no_login_msg'];
+			$option['show_track'] = (int) $_POST['show_track'];
+			$option['show_count'] = (int) $_POST['show_count'];
+			$option['block_bots'] = (int) $_POST['block_bots'];
+			$option['dl_interval'] = (int) $_POST['dl_interval'];
+			update_option('download_mgr', $option);
+			echo '<div class="updated"><p><strong>'.__('Settings have been saved.', 'download-mgr').'</strong></p></div>';
+		}
+		$option['path'] = stripslashes(htmlspecialchars($option['path']));
+		$option['url'] = stripslashes(htmlspecialchars($option['url']));
+		$option['wrong_level_msg'] = stripslashes(htmlspecialchars($option['wrong_level_msg']));
+		$option['no_login_msg'] = stripslashes(htmlspecialchars($option['no_login_msg']));
+?>
+	<div class="wrap">
+	<?php
+		if('none' != $this->tracking_type) {
+			if(!isset($_GET['tracking'])) { 
+?>
+	<div class="download_view"><a href="?page=x-download-manager&amp;tracking"><?php _e('Tracking Only', 'download-mgr'); ?></a></div>
+<?php
+			} else { 
+?>
+	<div class="download_view"><a href="?page=x-download-manager"><?php _e('Show Settings', 'download-mgr'); ?></a></div>
+<?php 
+			}
+		}
+?>
+	<h2><?php _e('Download Manager', 'download-mgr'); ?></h2>
+<?php
+			if(!isset($_GET['tracking'])) {
+?>
+	<form name="download_options" method="post" action="">
+		<input type="hidden" name="action" value="update" />
+		<fieldset class="options">
+		<legend><?php _e('Settings', 'download-mgr'); ?></legend>
+		<table cellspacing="2" cellpadding="5" class="editform">
+			<tr valign="baseline">
+				<th scope="row"><label for="path"><?php _e('Download path:', 'download-mgr') ?></label></th>
+				<td><input type="text" name="path" id="path"  size="64" value="<?php echo $option['path']; ?>" /></td>
+			</tr>
+			<tr valign="baseline">
+				<th scope="row"><label for="url"><?php _e('Download URL:', 'download-mgr') ?></label></th>
+				<td><input type="text" name="url" id="url"  size="64" value="<?php echo $option['url']; ?>" /></td>
+			</tr>
+			<tr valign="baseline">
+				<th scope="row"><label for="show_count"><?php _e('Show Counts:', 'download-mgr'); ?></label></th>
+				<td><input type="checkbox" name="show_count" id="show_count" value="1"<?php checked(true, $option['show_count']); ?> />
+				<?php _e('( Show download count )', 'download-mgr'); ?></td>
+			</tr>
+			<tr valign="baseline">
+				<th scope="row"><label for="block_bots"><?php _e('Disallow bots:', 'download-mgr'); ?></label></th>
+				<td><input type="checkbox" name="block_bots" id="block_bots" value="1"<?php checked(true, $option['block_bots']); ?> />
+				<?php _e('( Prevent some crawler\'s download )', 'download-mgr'); ?></td>
+			</tr>
+			<tr valign="baseline">
+				<th scope="row"><label for="dl_interval"><?php _e('Disallow bots:', 'download-mgr'); ?></label></th>
+				<td><select name="dl_interval" id="dl_interval">
+				<?php foreach($intervals as $interval) { ?>
+				<option value="<?php echo $interval; ?>"<?php if($option['dl_interval'] == $interval) echo ' selected="selected"'; ?>><?php echo $interval; ?> <?php _e('sec', 'download-mgr'); ?></option>
+				<?php } ?></select>
+				<?php _e('( Select download interval for one file per remote ip. )', 'download-mgr'); ?></td>
+			</tr>
+<?php if(class_exists('wp_slimstat_ex')) { ?>
+			<tr valign="baseline">
+				<th scope="row"><label for="show_track"><?php _e('SlimStat:', 'download-mgr'); ?></label></th>
+				<td><input type="checkbox" name="show_track" id="show_track" value="1"<?php checked(true, $option['show_track']); ?> />
+				<?php _e('(If checked, both Wp-SlimStat-Ex and Download-Manager will track download. default: Download-Manager only)', 'download-mgr'); ?></td>
+			</tr>
+<?php } ?>
+			<tr valign="baseline">
+				<th scope="row"><label for="allowed_level"><?php _e('Access level:', 'download-mgr'); ?></label></th>
+				<td><select name="allowed_level" id="allowed_level">
+				<?php
+				foreach($levels as $level) : ?>
+	<option value="<?php echo $level; ?>"<?php if($level == $option['allowed_level']) { echo ' selected="selected"'; } ?>><?php echo $level; ?></option>
+<?php endforeach; ?>
+				</select>
+				<?php _e('(Set lowest allowed user level)', 'download-mgr'); ?>
+				</td>
+			</tr>
+			<tr valign="baseline"<?php if('public' == $option['allowed_level']) echo 'style="display: none;"'; ?>>
+			<th scope="row"><label for="show_msgs"><?php _e('Report errors:', 'download-mgr') ?></label></th>
+			<td scope="row">
+			<label for="show_msgs">
+			<input name="show_msgs" type="checkbox" id="show_msgs" value="1" <?php checked('1', $option['show_msgs'], show_msgs); ?> onclick="toggle('msgs')" />&nbsp;
+			<?php _e('(Display messages on error)', 'download-mgr') ?>
+			</label>
+			</td>
+			</tr>
+		</table>
+		<div id="msgs" <?php if('public' == $option['allowed_level'] || false == $option['show_msgs']) { echo 'style="display:none;"'; } ?>>
+			<fieldset class="options">
+			<legend><?php _e('Error Messages', 'download-mgr'); ?></legend>
+			<table cellspacing="2" cellpadding="5" class="editform">
+			<tr valign="baseline">
+				<th scope="row"><label for="wrong_level_msg"><?php _e('Wrong level:', 'download-mgr') ?></label></th>
+				<td><input type="text" name="wrong_level_msg" id="wrong_level_msg"  size="75" value="<?php echo $option['wrong_level_msg']; ?>" /><br/>
+			</tr>
+			<tr valign="baseline">
+				<th scope="row"><label for="no_login_msg"><?php _e('No login:', 'download-mgr') ?></label></th>
+				<td><input type="text" name="no_login_msg" id="no_login_msg"  size="75" value="<?php echo $option['no_login_msg']; ?>" /><br/>
+			</tr>
+			</table>
+			</fieldset>
+		</div>
+		</fieldset>
+	<p class="submit">
+	<input type="submit" name="Submit"
+	value="<?php echo $button_text; ?> &raquo;" />
+	</p>
+	</form>
+<?php
+		}
+		if('none' != $this->tracking_type) {
+			$track_file = '';
+//			$this->_table('create');
+			if(isset($_GET['tracking']) && !empty($_GET['tracking'])) {
+				$track_file = $_GET['tracking'];
+			}
+?>
+		<fieldset class="options">
+		<legend><?php _e('Download Tracking', 'download-mgr'); ?><?php if($track_file) echo ': ' . basename($track_file) . ' [<a href="?page=x-download-manager&amp;tracking">&laquo;</a>]';   ?></legend>
+		<table id="downloads">
+<?php if($track_file !== '') $this->_table('list_file', $_GET['tracking']); else $this->_table('list', $option['allowed_level']) ?>
+		</table>
+		</fieldset>
+	<?php	
+		} 
+		echo '</div>';
+	}// end of manager page
+
+
+	function add_page() {
+		if(function_exists('add_management_page')) {
+			add_management_page(__('Download Manager', 'download-mgr'), __('Downloads', 'download-mgr'), 8, 'x-download-manager', array(&$this, 'manager_page'));
+		}
+	}
+
+	function _table($do='', $download_param='') {
+		global $wpdb;
+		$option = get_option('download_mgr');
+		$show_table = false;
+
+		if('none' != $this->tracking_type) {
+
+			switch($do) :
+				case 'insert' :
+					$result = $wpdb->query(
+					"INSERT INTO $wpdb->downloads (id, file_name, login, referer, remote_addr, date) VALUES(NULL, '" .
+					$download_param[0] . "', '" .
+					$download_param[1] . "', '" .
+					$download_param[2] . "', '" .
+					$download_param[3] . "', '" .
+					$download_param[4] . "')" );
+					return $result;
+				break;
+				case 'list' :
+					$file_names = @$wpdb->get_col("SELECT DISTINCT file_name FROM $wpdb->downloads ORDER BY file_name ASC");
+					if($file_names) {
+						if('public' != $option['allowed_level']) {
+							$login = "<th id=\"dl_login\">login</th>";
+						}
+						$download_list = "<tr>\n<th id=\"filename\">filename</th>$login<th id=\"referer\">referer</th><th id=\"ip\">ip</th><th id=\"timestamp\">timestamp</th><th id=\"count\">count</th>\n</tr>";
+						foreach($file_names as $file_name) {
+							$class = ('alternate' == $class) ? '' : 'alternate';
+							$download = @$wpdb->get_row("SELECT * FROM $wpdb->downloads WHERE file_name = '$file_name' ORDER BY date DESC");
+							$download_count = count($wpdb->get_col("SELECT id FROM $wpdb->downloads WHERE file_name = '$file_name'"));
+							if('public' != $option['allowed_level']) {
+								$download->login = ($download->login == '') ? '&nbsp;' : $download->login;
+								$td_login = "<td><div>$download->login</div></td>";
+							}
+							$download->referer = wp_specialchars($this->strcut($download->referer, 64));
+							$real_filename = basename($download->file_name);
+							$download->remote_addr = (!empty($download->remote_addr)) ? $download->remote_addr : 'Unknown';
+							$download->referer = (!empty($download->referer)) ? $download->referer :'Unknown';
+							$download_list .= "<tr valign=\"top\" class=\"$class\">\n\t";
+							$download_list .= "<td><span>";
+							$download_list .= "<a href=\"?page=x-download-manager&amp;tracking=$download->file_name\" ";
+							$download_list .= "class=\"list_file\" title=\"$download->file_name ($download_count)\">$real_filename</a>";
+							$download_list .= "</span></td>";
+							$download_list .= "$td_login\n\t";
+							$download_list .= "<td><span>$download->referer</span></td>\n\t";
+							$download_list .= "<td><span>$download->remote_addr</span></td>\n\t";
+							$download_list .= "<td><span>$download->date</span></td>\n\t";
+							$download_list .= "<td style=\"text-align:right;\"><span>$download_count</span></td>\n";
+							$download_list .= "</tr>";
+						}
+					} else {
+						$download_list = "<tr>\n<th>" . __('No downloads have been tracked.', 'download-mgr') . "</th>\n</tr>";
+					}
+					echo $download_list;
+				break;
+				case 'list_file' :
+					$downloads = @$wpdb->get_results("SELECT login, referer, remote_addr, date FROM $wpdb->downloads WHERE file_name = '$download_param' ORDER BY date DESC LIMIT 0,40");
+					if($downloads) {
+						if('public' != $option['allowed_level']) {
+							$login = "<th id=\"dl_login\">login</th>";
+						}
+						$download_list = "<tr>\n$login<th id=\"referer\">referer</th><th id=\"ip\">ip(country)</th><th id=\"timestamp\">timestamp</th>\n</tr>";
+						foreach($downloads as $download) {
+							$class = ('alternate' == $class) ? '' : 'alternate';
+							if('public' != $option['allowed_level']) {
+								$download->login = ($download->login == '') ? '&nbsp;' : $download->login;
+								$td_login = "<td><div>$download->login</div></td>";
+							}
+							$download->referer = wp_specialchars($this->strcut($download->referer, 64));
+							$download->remote_addr = (!empty($download->remote_addr)) ? $download->remote_addr : 'Unknown';
+							$download->referer = (!empty($download->referer)) ? $download->referer :'Unknown';
+							$download_list .= "<tr valign=\"top\" class=\"$class\">\n$td_login<td><div>$download->referer</div></td><td><div>$download->remote_addr</div></td><td><div>$download->date</div></td>\n</tr>";
+						}
+					} else {
+						$download_list = "<tr>\n<th>" . __('No downloads have been tracked.', 'download-mgr') . "</th>\n</tr>";
+					}
+					echo $download_list;
+				break;
+			endswitch;
+		}
+	}
+
+	function strcut($text, $len=60) {
+		if( strlen($text) > $len ) {
+			$charset = get_option('blog_charset');
+			if(function_exists('mb_strcut')) 
+				$text = mb_strcut($text, 0, $len, $charset);
+			else
+				$text = substr($text, 0, $len);
+			$text .= "...";
+		}
+		return $text;
+	}
+
+	function _die($msg, $title='') {
+		global $wp_locale;
+
+		header('Content-Type: text/html; charset=utf-8');
+
+		if ( empty($title) )
+			$title = __('WordPress &rsaquo; Error');
+
+			$admin_dir = get_option('siteurl').'/wp-admin/';
+
+	?>
+	<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+	<html xmlns="http://www.w3.org/1999/xhtml" <?php if ( function_exists('language_attributes') ) language_attributes(); ?>>
+	<head>
+		<title><?php echo $title ?></title>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<link rel="stylesheet" href="<?php echo $admin_dir; ?>install.css" type="text/css" />
+	<?php if ( ('rtl' == $wp_locale->text_direction) ) : ?>
+		<link rel="stylesheet" href="<?php echo $admin_dir; ?>install-rtl.css" type="text/css" />
+	<?php endif; ?>
+	</head>
+	<body>
+		<h1 id="logo"><img alt="WordPress" src="<?php echo $admin_dir; ?>images/wordpress-logo.png" /></h1>
+		<p><?php echo $message; ?></p>
+	</body>
+	</html>
+	<?php
+
+		die();
+	}
+
+
+	 // if 'dl' GET query, start downloadin'!
+	function _dmgr() {
+		if(isset($_GET['dl']) && !empty($_GET['dl'])) :
+		if($this->conf['block_bots']) {
+			$robots = array('slurp', 'msnbot', 'crawl', 'googlebot', 'yeti', 'nhnbot', '1noonbot', 'empas', 'waazle', 'java', 'wisebot');
+			$user_agent = $_SERVER["HTTP_USER_AGENT"];
+			foreach ($robots as $bot) {
+				if(strpos(strtolower($user_agent), $bot) !== false || empty($user_agent)) {
+					$this->_die( __('Your user_agent(bot) is not allowed to download this file.', 'download-mgr'), $this->failure_title );
+				}
+			}
+		}
+		global $wp_version, $wpdb;
+		$file_name = trim($_GET['dl']);
+		if (isset($_COOKIE['wordpressuser_' . COOKIEHASH])) {
+			$user_login = $_COOKIE['wordpressuser_' . COOKIEHASH];
+			if(2 > $wp_version) {
+				$user_level = $wpdb->get_var("SELECT user_level FROM $wpdb->users WHERE user_login = '$user_login'");
+			} else {
+				$user_level = $wpdb->get_var("SELECT meta_value FROM $wpdb->usermeta, $wpdb->users WHERE user_login = '$user_login' AND ID = user_id AND meta_key = '" . $wpdb->prefix . "user_level'");
+			}
+		}
+		 // if proper access level
+		if(('public' == $this->conf['allowed_level']) || ($user_login && ($user_level >= $this->conf['allowed_level']))) {
+			// protect from site traversing
+			$file_name = str_replace('../', '', $file_name); 
+
+			if($file_name) {
+				// directory crawl process
+				$path = rtrim(stripslashes($this->conf['path']), '/');
+				$dir_stack = array($path);
+				$files	= array();
+				while($dir = array_shift($dir_stack)) {
+					if($dh = opendir($dir)) {
+						while(($file = readdir($dh)) !== false) {
+							if($file != '.' && $file != '..') {
+								$full_path = "$dir/$file";
+								$files[] = $full_path;
+								if(is_dir($full_path)) {
+									$dir_stack[] = $full_path;
+								}
+							}
+						}
+					}
+					closedir($dh);
+				}
+				foreach($files as $file) {
+					if(preg_match("%$file_name$%", $file)) {
+						if($this->conf['show_track'] == true) {
+							//wp-slimstat tracking
+							if(class_exists('SSTrack')) {
+								$SlimTrack =& SSTrack::get_instance();
+								$SlimTrack->slimtrack();
+							}
+						}
+						// add record to table
+						$referer = $_SERVER['HTTP_REFERER'];
+						$ip = $_SERVER['REMOTE_ADDR'];
+						$now = date('Y-m-d H:i:s');
+						// check download time interval
+						if( $this->conf['dl_interval'] > 0 ) {
+							$last_time = @$wpdb->get_var("SELECT MAX(UNIX_TIMESTAMP(`date`)) AS `dt` FROM $wpdb->downloads WHERE remote_addr = '$ip' AND file_name = '$file_name'", 0, 0);
+							if( $last_time && ( time() < $last_time + (int) $this->conf['dl_interval'] ) )
+								$this->_die( sprintf(__('You are downloading same file too quickly. Slow down. (Allowed interval : %s sec)', 'download-mgr'), (int)$this->conf['dl_interval'] ), $this->failure_title );
+						}
+						$download_array = array($file_name, $user_login, $referer, $ip, $now);
+						$this->_table('insert', $download_array); 
+
+						$correct_path = str_replace($path, '', $file);
+						$url = rtrim(stripslashes($this->conf['$url']), '/');
+						$file_url = $url . $correct_path;
+						@ignore_user_abort();
+						@set_time_limit(0);
+
+						$mimetype = 'application/octet-stream';  // set mime-type
+						$handle = fopen($file, "rb"); // now let's get the file!
+						header("Pragma: "); // Leave blank for issues with IE
+						header("Cache-Control: must-revalidate, post-check=0, pre-check=0");
+					  header("Content-Type: $mimetype");
+					  header("Content-Disposition: attachment; filename=" . basename($file_name));
+						header("Content-Length: " . (filesize($file)));
+						fpassthru($handle);
+						die;
+					}
+				}
+				if(!$correct_path) { // file does not exist; provide 404 error
+					if(preg_match('/cgi/', php_sapi_name())) {
+						header('Status: 404 Not Found');
+					} else {
+						header('HTTP/1.x 404 Not Found');
+					}
+				}
+			} else {
+				return; // no file specified, so end gracefully
+			}
+		} else {
+			if(1 == $this->conf['show_msgs']) {
+				if($user_login && ($user_level < $this->conf['allowed_level'])) { // is user but wrong level
+					$this->_die( stripslashes($this->conf['wrong_level_msg']), $this->failure_title );
+				} else { // is not a user
+					$this->_die( stripslashes($this->conf['no_login_msg']), $this->failure_title );
+				}
+			} else {
+				return;
+			}
+		}
+		endif;
+	}
+
+	//Added by 082net
+	function _filter($content) {
+		if($this->htmltagset)
+			$content = preg_replace('#\<file\>(.*?)\</file\>#sie', '$this->_content(\'$1\');', $content);
+		$content = preg_replace('#\[file\](.*?)\[/file\]#sie', '$this->_content(\'$1\');', $content);
+		return $content;
+	}
+
+	function _content($files) { 
+		$url = get_option('home');
+		$r = '<div class="dm-wrap">';
+		$files = str_replace(' ', '', $files);
+		$files = str_replace("\r\n", '', $files);
+		$files = str_replace("\n", '', $files);
+		$files = explode(',', $files);
+
+		for ($i = 0; $i < count($files); $i++) {
+			$file = trim($files[$i]);
+			if(empty($file)) continue;
+			$fname = basename($file);
+			if($this->conf['show_count']) {
+				global $wpdb;
+				$query = "SELECT COUNT(*) AS `count` FROM `$wpdb->downloads` WHERE `file_name` LIKE '$fname' ";
+				$count = ($wpdb->get_var($query));
+			}
+			$f = $this->conf['path'].$file;
+			if (file_exists($f)) {
+				$fsize = $this->_getFilesize(@filesize($f));
+				$r .= '<div class="dm-file"><span class="dm-fname">';
+				$r .= '<img alt="download" src="'.$this->pluginURL.'/i/i-png/'.$this->_getFileicon($fname).'.png" style="vertical-align:top;" /> ';
+				$r .= '<a href="'.$url.'/?dl='.$file.'" title="Download '.$fname.'"> '.$fname.'</a>';
+				$r .='</span><span class="dm-meta">('.$fsize.(($this->conf['show_count'])?', '.$count:'').')</span></div>';
+			} else {
+				$r .= '<div class="dm-file">File Not Found</div>';
+			}
+		}
+		$r .= '</div>';
+		return $r;
+	}
+
+	//from Download Beautifier(http://binslashbash.org)
+	function _getFilesize ($fsize) {
+		if (strlen($fsize) <= 9 && strlen($fsize) >= 7) {				
+			$fsize = number_format($fsize / 1048576,1);
+			return "$fsize MB";
+		} elseif (strlen($fsize) >= 10) {
+			$fsize = number_format($fsize / 1073741824,1);
+			return "$fsize GB";
+		} else {
+			$fsize = number_format($fsize / 1024,1);
+			return "$fsize KB";
+		}
+	}
+
+	//filetype icons by Mark James(http://www.famfamfam.com/)
+	function _getFileicon ($file) {
+		$iconArray = array('tar'=>'tar', 'gz'=>'tgz', 'zip'=>'zip', 'rar'=>'rar', 'pdf'=>'pdf', 'doc'=>'doc', 'txt'=>'txt', 'c'=>'c', 'cpp'=>'c', 'pl'=>'source', 'py'=>'source', 'phps'=>'php', 'php'=>'php', 'sql'=>'sql', 'mp1'=>'mp3', 'mp2'=>'mp3', 'wma'=>'snd', 'mp3'=>'mp3', 'wav'=>'mp3', 'midi'=>'snd', 'mid'=>'snd', 'snd'=>'snd', 'avi'=>'vid1', 'mpg'=>'vid1', 'mpeg'=>'vid1', 'mov'=>'vid1', 'moov'=>'vid1', 'wmf'=>'vid', 'divx'=>'vid1', 'asf'=>'vid', 'wmv'=>'vid', 'mp4'=>'vid1', 'psd'=>'psd', 'gif'=>'gif', 'jpg'=>'jpg', 'jpeg'=>'jpg', 'tif'=>'tif', 'png'=>'png', 'bmp'=>'bmp', 'tiff'=>'tif', 'html'=>'html', 'htm'=>'html', 'swf'=>'swf');
+		$filetype = array_reverse(explode('.', basename($file)));
+		if(count($filetype) > 1 ) {
+			$icon = (isset($iconArray[$filetype[0]]))?$iconArray[$filetype[0]]:"default";
+		} else 
+			$icon = 'download';
+			return $icon;
+	}
+
+	function is_dmgr_page() {
+		return$_GET['page'] == 'x-download-manager';
+	}
+
+	function _basename($file) {
+		$file = preg_replace('|\\\\+|', '\\\\', $file);
+		$file = preg_replace('/^.*wp-content[\\\\\/]plugins[\\\\\/]/', '', $file);
+		$file = str_replace('\\', '/', $file);
+		return $file;
+	}
+
+	function add_query_var($vars) {
+		$vars[] = 'dl';
+		return $vars;
+	}
+
+	function &get_instance() {
+		static $instance = array();
+		if ( empty( $instance ) ) {
+			$instance[] =& new WP_DMGR();
+		}
+		return $instance[0];
+	}
+
+}// end of class
+endif;//if !class_exists
+
+$WP_DMGR =& WP_DMGR::get_instance();
+if($wp_version < 2) {
+	if (isset($_GET['activate']) && $_GET['activate'] == 'true')
+		add_action( 'init', array( &$WP_DMGR, 'setup' ) );
+} else {
+	add_action('activate_'.$WP_DMGR->_basename(__FILE__), array(&$WP_DMGR, 'setup'));
+}
+
+add_action('init', array(&$WP_DMGR, '_dmgr'));
+add_action('wp_head', array(&$WP_DMGR, 'wp_head'));
+add_filter('the_content', array(&$WP_DMGR, '_filter'), 9);
+add_filter('the_excerpt', array(&$WP_DMGR, '_filter'), 9);
+add_action('admin_menu', array(&$WP_DMGR, 'add_page'));
+add_filter('query_vars', array(&$WP_DMGR, 'add_query_var'));
+
+if ($WP_DMGR->is_dmgr_page()) {
+	add_action('admin_head', array(&$WP_DMGR, 'admin_head'));
+}
+
+unset($WP_DMGR);
+?>

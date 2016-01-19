@@ -1,0 +1,132 @@
+msgid ""
+msgstr ""
+"Plural-Forms: s\n"
+"Project-Id-Version: Download-Manager\n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: 2006-07-24 15:44+0900\n"
+"Last-Translator: 082net <082net@gmail.com>\n"
+"Language-Team: 082NeT <082net@gmail.com>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-Language: Korean\n"
+"X-Poedit-Country: KOREA, REPUBLIC OF\n"
+"X-Poedit-SourceCharset: utf-8\n"
+"X-Poedit-KeywordsList: __;_e\n"
+"X-Poedit-Basepath: .\n"
+"X-Poedit-SearchPath-0: .\n"
+
+# download-mgr.php:68
+msgid "You do not have sufficient permissions to access this page."
+msgstr "죄송합니다. 이 페이지에 접근할 권한이 없습니다."
+
+# download-mgr.php:75
+msgid "Update Settings"
+msgstr "설정 업데이트"
+
+# download-mgr.php:95
+msgid "Settings have been saved."
+msgstr "설정이 저정되었습니다."
+
+# download-mgr.php:105
+msgid "Sorry, you don't have the right user level for downloads."
+msgstr "죄송합니다. 등록된 사용자 이시지만, 파일을 다운받을 권한이 없습니다."
+
+# download-mgr.php:106
+msgid "You must be a "
+msgstr "파일을 다운받으시려면 "
+
+# download-mgr.php:106
+msgid " user and logged on to download."
+msgstr " 에 가입하셔야 하며 로그인 상태여야 합니다."
+
+# download-mgr.php:107
+msgid "Add Settings"
+msgstr "설정 추가"
+
+# download-mgr.php:111
+msgid "Set Download Manager options and click Add Settings."
+msgstr "Download Manager 옵션을 자신에 맞게 변경하시고, '설정추가'를 누르세요."
+
+# download-mgr.php:124
+msgid "Tracking Only"
+msgstr "추적화면만 보기"
+
+# download-mgr.php:126
+msgid "Show Settings"
+msgstr "설정화면 보기"
+
+# download-mgr.php:130
+# download-mgr.php:216
+msgid "Download Manager"
+msgstr "다운로드 관리"
+
+# download-mgr.php:137
+msgid "Settings"
+msgstr "설정"
+
+# download-mgr.php:140
+msgid "Download path:"
+msgstr "파일 경로:"
+
+# download-mgr.php:144
+msgid "Download URL:"
+msgstr "파일 주소:"
+
+# download-mgr.php:152
+msgid "Show Counts:"
+msgstr "다운로드 횟수:"
+
+# download-mgr.php:154
+msgid "( Show download count )"
+msgstr "( 다운로드 횟수 보이기 )"
+
+# download-mgr.php:148
+msgid "SlimStat:"
+msgstr "SlimStat:"
+
+# download-mgr.php:150
+msgid "(If checked, both Wp-SlimStat-Ex and Download-Manager will track download. default: Download-Manager only)"
+msgstr "(체크하면 Wp-SlimStat-Ex에서도 다운로드 파일을 추적하도록 합니다. 기본값: SlimStat 추적안함)"
+
+# download-mgr.php:153
+msgid "Access level:"
+msgstr "접근 권한:"
+
+# download-mgr.php:160
+msgid "(Set lowest allowed user level)"
+msgstr "(파일에 접근할 최소 권한을 선택하세요. 관리자 권한은 8 이상입니다)"
+
+# download-mgr.php:164
+msgid "Report errors:"
+msgstr "오류 내용 출력:"
+
+# download-mgr.php:168
+msgid "(Display messages on error)"
+msgstr "(다운로드 오류발생시 내용을 출력합니다)"
+
+# download-mgr.php:175
+msgid "Error Messages"
+msgstr "오류 내용"
+
+# download-mgr.php:178
+msgid "Wrong level:"
+msgstr "권한 없슴:"
+
+# download-mgr.php:182
+msgid "No login:"
+msgstr "가입 필요:"
+
+# download-mgr.php:204
+msgid "Download Tracking"
+msgstr "다운로드 통계"
+
+# download-mgr.php:216
+msgid "Downloads"
+msgstr "다운로드"
+
+# download-mgr.php:354
+# download-mgr.php:377
+msgid "No downloads have been tracked."
+msgstr "아직 파일을 다운받은 정보가 없습니다."
+

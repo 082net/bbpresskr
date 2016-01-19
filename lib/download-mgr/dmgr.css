@@ -1,0 +1,47 @@
+/* Download Mgr */
+div.dm-wrap {
+position: relative;
+margin: 0;
+margin-bottom: 12px;
+padding: 4px 20px 4px 40px;
+background-color: #fafafa;
+background-image: url('i/zip.gif');
+background-position: 1% 50%;
+background-repeat: no-repeat;
+border-top: #ccd 1px dashed;
+border-bottom:#ccd 1px solid;
+text-align: center;
+}
+div.dm-wrap:hover {
+background-color: #f8f8f8;
+border-color: #aeaeae;
+}
+div.dm-file {
+padding-right: 12px;
+margin-top: 2px;
+}
+div.dm-file a, div.dm-file a:visited {
+color: #27552E; 
+text-decoration: none; 
+border: none;
+}
+div.dm-file a:hover {
+color: #8aa54a;
+text-decoration: none; 
+}
+div.dm-file img {
+padding: 0;
+margin: 0;
+border: none;
+margin-top: 1px;
+}
+div.dm-file span {
+}
+span.dm-fname {
+/*background: url('i/cube.gif') 2px center no-repeat;*/
+/*padding-left: 16px;*/
+padding-right: 2px;
+}
+span.dm-meta {
+color: #999;
+}
