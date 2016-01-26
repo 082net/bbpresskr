@@ -32,6 +32,8 @@ class Admin {
 	private static function setup_actions() {
 		add_action( 'admin_init', array(__CLASS__, 'admin_init') );
 
+		Admin\Settings::init();
+
 		do_action( 'bbpkr_admin_setup_actions' );
 	}
 
@@ -39,8 +41,6 @@ class Admin {
 		Admin\Forum::init();
 
 		Admin\Meta::init();
-
-		Admin\Settings::init();
 	}
 
 }

@@ -12,8 +12,7 @@ if ( !defined('BBPKR_PATH') ) die('HACK');
 class Topic {
 
 	public static function init() {
-		add_action( 'bbpkr_setup_actions', array( __CLASS__, 'setup_actions' ) );
-		// require( BBPKR_INC . '/topic-views-counter.php' );
+		self::setup_actions();
 		Topic\Views_Counter::init();
 	}
 
