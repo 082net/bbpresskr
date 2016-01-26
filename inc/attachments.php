@@ -23,6 +23,8 @@ class Attachments {
 
   static $upload_perms, $download_perms, $wp_download_level;
 
+  protected static $forum_id;
+
   static function init() {
     // self::includes();
     self::setup();
@@ -113,18 +115,29 @@ class Attachments {
     }
 
     $can = isset($allcaps['upload_files']) ? $allcaps['upload_files'] : false;
-
     // async-upload.php, admin-ajax.php 를 통해서 업로드할 때 권한 체크가 어려움
-    // 쿠키에 현재 포럼값이 저장되어 있을경우에는 진행
     $ajax_attachment_actions = apply_filters( 'bbpkr_ajax_attachment_actions', array( 'upload-attachment', 'query-attachments' ) );
     if (
-      ! empty($_COOKIE['_bbp_forum_id'] ) &&
+      ( isset($_REQUEST['post_id']) || !empty(self::$forum_id) ) &&
       empty( $allcaps['upload_files'] ) &&
-      is_user_logged_in() &&
       ( defined( 'DOING_AJAX' ) && true === DOING_AJAX ) &&
         ( isset( $_REQUEST['action'] ) && in_array( $_REQUEST['action'], $ajax_attachment_actions ) )
       ) {
-      $forum_id = (int) $_COOKIE['_bbp_forum_id'];
+      if ( isset($_REQUEST['post_id']) ) {
+        $the_id = (int) $_REQUEST['post_id'];
+        if ( bbp_is_forum($the_id) ) {
+          self::$forum_id = $the_id;
+        } elseif ( bbp_is_topic($the_id) ) {
+          self::$forum_id = (int) bbp_get_topic_forum_id($the_id);
+        } elseif ( bbp_is_reply($the_id) ) {
+          self::$forum_id = (int) bbp_get_reply_forum_id($the_id);
+        }
+      }
+
+      if ( !self::$forum_id )
+        return $allcaps;
+
+      $forum_id = self::$forum_id;
       // unset post_id to avoid edit_post check( DO NOT UNSET $_POST['post_id'] )
       $_REQUEST['post_id'] = null;
       $allcaps['upload_files'] = self::can_upload($can, $forum_id);
@@ -137,19 +150,7 @@ class Attachments {
   }
 
   public static function can_upload($can = false, $forum_id = 0) {
-    $forum_id = bbp_get_forum_id( $forum_id );
-    if ( ! $forum_id )
-      return $can;
-
-    if ( current_user_can( 'moderate' ) )
-      return true;
-
-    $allowed_roles = (array) get_option( '_bbpkr_upload_perms', self::$upload_perms );
-    if ( get_post_meta( $forum_id, 'bbpkr_custom_perm', true ) )
-      $allowed_roles = Permissions::get_forum_perms($forum_id, 'upload');
-    $can = in_array( bbpresskr()->get_user_role(), $allowed_roles );
-
-    return $can;
+    return Permissions::upload_files($can, $forum_id);
   }
 
   static function can_download( $attachment ) {
@@ -160,11 +161,16 @@ class Attachments {
     $post = get_post($attachment->post_parent);
     $post_type = get_post_type($post);
     $bbp_types = array( bbp_get_topic_post_type(), bbp_get_reply_post_type() );
+
     if ( in_array( $post_type, $bbp_types ) ) {
+
+      if ( current_user_can( 'moderate' ) )
+        return true;
+
       $forum_id = $post_type == bbp_get_topic_post_type() ? bbp_get_topic_forum_id() : bbp_get_reply_forum_id();
       $allowed_roles = (array) get_option( '_bbpkr_download_perms', self::$download_perms );
-      if ( get_post_meta( $forum_id, 'bbpkr_custom_perm', true ) )
-        $allowed_roles = Permissions::get_forum_perms($forum_id, 'download');
+      if ( $use_custom = Permissions::use_custom( $forum_id ) )
+        $allowed_roles = Permissions::get_forum_perms($use_custom, 'download');
 
       $can = in_array( bbpresskr()->get_user_role(), $allowed_roles );
     } else {
@@ -196,7 +202,7 @@ class Attachments {
     }
 
     if ( $forum_id ) {
-      @setcookie('_bbp_forum_id', $forum_id, 0, COOKIEPATH, COOKIE_DOMAIN);
+      // @setcookie('_bbp_forum_id', $forum_id, 0, COOKIEPATH, COOKIE_DOMAIN);
       if ( empty( $settings['post'] ) ) {
         $settings['post'] = array(
           'id' => $forum_id,
@@ -204,7 +210,7 @@ class Attachments {
         );
       }
     } else {
-      @setcookie('_bbp_forum_id', ' ', time() - YEAR_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN);
+      // @setcookie('_bbp_forum_id', ' ', time() - YEAR_IN_SECONDS, COOKIEPATH, COOKIE_DOMAIN);
     }
     return $settings;
   }
@@ -241,7 +247,7 @@ class Attachments {
         wp_die( stripslashes(self::$conf['no_login_msg']), self::$failure_title );
       }
     }
-    
+
     // user info
     $ip = $_SERVER['REMOTE_ADDR'];
     $now = date('Y-m-d H:i:s');
@@ -304,7 +310,7 @@ class Attachments {
         } elseif ($blog_is_utf8 && !seems_utf8($_file)) { // fix for international file name
           if (function_exists('mb_convert_encoding'))
             $_file_c = mb_convert_encoding($_file, 'UTF-8', 'ASCII, UTF-8, EUC-KR, JIS, EUC-JP, SJIS, ISO-8859-1');
-          else 
+          else
             continue;
           if($_file_c == $file_name) {
             $file_exists = $_file; // return real file name
@@ -318,13 +324,13 @@ class Attachments {
     return $file_exists;
   }
 
-  static function get_mime_type( $file_path ) { 
+  static function get_mime_type( $file_path ) {
     if ( function_exists( 'mime_content_type' ) ) {
       $file_mime_type = @mime_content_type( $file_path );
     } elseif ( function_exists( 'finfo_file' ) ) {
       $finfo = @finfo_open(FILEINFO_MIME);
       $file_mime_type = @finfo_file($finfo, $file_path);
-      finfo_close($finfo);  
+      finfo_close($finfo);
     } else {
       $file_mime_type = false;
     }
@@ -337,7 +343,7 @@ class Attachments {
         }
       }
     }
-    return $file_mime_type;  
+    return $file_mime_type;
   }
 
   //Added by 082net
@@ -536,7 +542,7 @@ class Attachments {
 
   //from Download Beautifier(http://binslashbash.org)
   static function _getFilesize ($fsize) {
-    if (strlen($fsize) <= 9 && strlen($fsize) >= 7) {       
+    if (strlen($fsize) <= 9 && strlen($fsize) >= 7) {
       $fsize = number_format($fsize / 1048576,1);
       return "$fsize MB";
     } elseif (strlen($fsize) >= 10) {
@@ -593,4 +599,4 @@ class Attachments {
 
 }
 
-Attachments::init();
+// Attachments::init();

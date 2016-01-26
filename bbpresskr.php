@@ -36,7 +36,33 @@ define( 'BBPKR_PATH', dirname(__FILE__) );
 define( 'BBPKR_INC', BBPKR_PATH . '/inc' );
 define( 'BBPKR_LIB', BBPKR_PATH . '/lib' );
 
-require( BBPKR_INC . '/core.php' );
+
+spl_autoload_register(function ($class) {
+    // project-specific namespace prefix
+    $prefix = 'bbPressKR\\';
+
+    // does the class use the namespace prefix?
+    $len = strlen($prefix);
+    if (strncmp($prefix, $class, $len) !== 0) {
+        // no, move to the next registered autoloader
+        return;
+    }
+
+    // get the relative class name
+    $relativeClass = substr($class, $len);
+    $relativeClass = str_replace('_', '-', strtolower($relativeClass));
+
+    $fileInc = rtrim(BBPKR_INC, '/') . '/' . str_replace('\\', '/', $relativeClass) . '.php';
+    $fileLib = rtrim(BBPKR_LIB, '/') . '/' . str_replace('\\', '/', $relativeClass) . '.php';
+
+    // if the file exists, require it
+    if (file_exists($fileInc)) {
+      require $fileInc;
+    } elseif ( file_exists($fileLib) ) {
+      require $fileLib;
+    }
+});
+
 require( BBPKR_INC . '/functions-compat.php' );
 require( BBPKR_INC . '/functions.php' );
 

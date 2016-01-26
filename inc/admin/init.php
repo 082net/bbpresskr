@@ -1,7 +1,7 @@
 <?php
 /**
  * Admin interface for bbPressKR
- * 
+ *
  * @package bbPressKR
  * @subpackage Admin
  * @copyright 2014-2015 082NeT(082net@gmail.com)

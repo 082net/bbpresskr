@@ -14,7 +14,10 @@ class Reply {
 	static $topic_list_table;
 
 	public static function init() {
-		add_action( 'bbpkr_setup_actions', array( __CLASS__, 'setup_actions' ) );
+		if ( !did_action('init') )
+			add_action( 'bbpkr_setup_actions', array( __CLASS__, 'setup_actions' ) );
+		else
+			self::setup_actions();
 	}
 
 	public static function setup_actions() {
@@ -22,7 +25,9 @@ class Reply {
 		// add_filter( 'get_comments_number', array( __CLASS__, 'get_comments_number' ), 10, 2 );
 		add_filter( 'comments_template', array( __CLASS__, 'comments_template' ), 88.88 );
 
-		add_action( 'bbp_init', array( __CLASS__, 'remove_attachments_for_reply' ), 88.88 );
+		// add_action( 'bbp_init', array( __CLASS__, 'remove_attachments_for_reply' ), 88.88 );
+
+		Reply\Secret::init();
 	}
 
 	public static function comments_open($open, $post_id) {
@@ -77,4 +82,4 @@ class Reply {
 
 }
 
-Reply::init();
+// Reply::init();

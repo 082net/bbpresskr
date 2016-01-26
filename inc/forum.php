@@ -18,19 +18,6 @@ class Forum {
 	}
 
 	static function init() {
-
-	}
-
-	private static function setup_actions() {
-		add_action( 'the_post', array(__CLASS__, 'setup_forumdata') );
-		add_action( 'bbp_template_before_single_forum', array( __CLASS__, 'forum_title' ), 3 );
-	}
-
-	static function forum_title() {
-		if ( bbp_is_theme_compat_active() && '' != bbpresskr()->option('page_title_selector') ) {
-
-		}
-
 	}
 
 	static function options($forum_id=0, $admin=false) {
@@ -77,4 +64,4 @@ class Forum {
 
 }
 
-Forum::init();
+// Forum::init();

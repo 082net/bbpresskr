@@ -9,14 +9,17 @@
  * Pippin Williamson and Remi Corson (URI: http://pippinsplugins.com)
  */
 
-namespace bbPressKR;
+namespace bbPressKR\Reply;
 
 if ( !defined('BBPKR_PATH') ) die('HACK');
 
-class PrivateReply {
+class Secret {
 
 	static function init() {
-		self::setup_actions();
+		if ( !did_action('init') )
+			add_action( 'template_redirect', array(__CLASS__, 'setup_actions') );
+		else
+			self::setup_actions();
 	}
 
 	static function setup_actions() {
@@ -224,4 +227,4 @@ class PrivateReply {
 
 }
 
-PrivateReply::init();
+// PrivateReply::init();

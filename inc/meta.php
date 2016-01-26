@@ -16,18 +16,20 @@ class Meta {
 	}
 
 	static function setup_actions() {
-		add_action( 'bbp_theme_after_topic_form_content' , array(__CLASS__, 'print_meta_fields') );
+		if ( !is_admin() ) {
+			add_action( 'bbp_theme_after_topic_form_content' , array(__CLASS__, 'print_meta_fields') );
 
-		add_action( 'bbpkr_' . bbp_get_topic_post_type() . '_list_custom_column', array(__CLASS__, 'meta_column'), 10, 2 );
-		add_action( 'bbpkr_' . bbp_get_topic_post_type() . '_list_columns', array(__CLASS__, 'meta_columns'), 10, 2 );
+			add_action( 'bbpkr_' . bbp_get_topic_post_type() . '_list_custom_column', array(__CLASS__, 'meta_column'), 10, 2 );
+			add_action( 'bbpkr_' . bbp_get_topic_post_type() . '_list_columns', array(__CLASS__, 'meta_columns'), 10, 2 );
 
-		// bbp_new_topic_post_extras, bbp_edit_topic_post_extras
-		// add_action( 'bbp_new_topic_post_extras', array(__CLASS__, 'update_bbpmeta') );
-		// add_action( 'bbp_edit_topic_post_extras', array(__CLASS__, 'update_bbpmeta') );
-		add_action( 'save_post_' . bbp_get_topic_post_type(), array(__CLASS__, 'update_bbpmeta') );
+		} elseif ( !defined('DOING_AJAX') || !DOING_AJAX ) {
+			// bbp_new_topic_post_extras, bbp_edit_topic_post_extras
+			// add_action( 'bbp_new_topic_post_extras', array(__CLASS__, 'update_bbpmeta') );
+			// add_action( 'bbp_edit_topic_post_extras', array(__CLASS__, 'update_bbpmeta') );
+			add_action( 'save_post_' . bbp_get_topic_post_type(), array(__CLASS__, 'update_bbpmeta') );
 
-		add_action( 'add_meta_boxes_' . bbp_get_topic_post_type(), array(__CLASS__, 'add_meta_box') );
-
+			add_action( 'add_meta_boxes_' . bbp_get_topic_post_type(), array(__CLASS__, 'add_meta_box') );
+		}
 	}
 
 	static function add_meta_box( $topic ) {
@@ -214,5 +216,5 @@ class Meta {
 
 }
 
-Meta::init();
+// Meta::init();
 

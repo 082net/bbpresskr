@@ -16,36 +16,14 @@ class Roles {
 	static function init() {
 		// add_action( 'template_redirect', array( __CLASS__, 'reinit_user_caps' ) );
 		// add_filter( 'user_has_cap', array( __CLASS__, 'debug' ), 11, 4 );
-		add_action( 'template_redirect', array( __CLASS__, 'regiseter_caps_filter' ) );
+		if ( !did_action('setup_theme') )
+			add_action( 'after_setup_theme', array( __CLASS__, 'regiseter_caps_filter' ) );
+		else
+			self::regiseter_caps_filter();
 	}
 
 	static function regiseter_caps_filter() {
 		add_filter( 'user_has_cap', array( __CLASS__, 'user_has_cap' ), 10, 4 );
-	}
-
-	static function get_forum_id() {
-		$forum_id = 0;
-
-		if ( is_admin() ) {
-		} elseif ( bbp_is_single_user_edit() || bbp_is_single_user() ) {
-		} elseif ( bbp_is_forum_archive() ) {
-		} elseif ( bbp_is_forum_edit() ) {
-			$forum_id = bbp_get_forum_id();
-		} elseif ( bbp_is_single_forum() ) {
-			$forum_id = bbp_get_forum_id();
-		} elseif ( bbp_is_topic_archive() ) {
-		} elseif ( bbp_is_topic_edit() || bbp_is_single_topic() ) {
-			$forum_id = bbp_get_forum_id();
-		} elseif ( is_post_type_archive( bbp_get_reply_post_type() ) ) {
-		} elseif ( bbp_is_reply_edit() || bbp_is_single_reply() ) {
-			$forum_id = bbp_get_forum_id();
-		} elseif ( bbp_is_single_view() ) {
-		} elseif ( bbp_is_search() ) {
-		} elseif ( bbp_is_topic_tag_edit() || bbp_is_topic_tag() ) {
-			$forum_id = bbp_get_forum_id();
-		}
-
-		return $forum_id;
 	}
 
 	// We should check capabilites every time for shortcodes
@@ -53,7 +31,7 @@ class Roles {
 		static $doing = false;
 
 		// bypass if non-bbpress contents and avoid infinite loop
-		if ( $doing === true || !is_bbpress() ) {
+		if ( $doing === true || !did_action('wp') || !is_bbpress() ) {
 			return $allcaps;
 		}
 
@@ -78,6 +56,7 @@ class Roles {
 			return $allcaps;
 		}
 
+		// Give all modorator capabilities to optional forum moderators per forum
 		$moderators = bbpresskr()->forum_option('moderators', $forum_id);
 		if ( in_array( $user->ID, $moderators ) && ($new_caps = bbp_get_caps_for_role( bbp_get_moderator_role() )) ) {
 			// remove all bbpress capabilities and append for asigned role only
@@ -86,6 +65,7 @@ class Roles {
 			$allcaps['upload_files'] = true;
 		}
 
+		// In case we use usermeta for forum moderator setting
 		/*$metakey = "forum_role_{$forum_id}";
 		// Dobule check forum role still exists. Role may excluded by plugin or updates.
 		if ( isset( $user->$metakey ) && ($new_caps = bbp_get_caps_for_role( $user->$metakey )) ) {
@@ -101,4 +81,4 @@ class Roles {
 
 }
 
-Roles::init();
+// Roles::init();

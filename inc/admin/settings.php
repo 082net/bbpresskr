@@ -86,14 +86,14 @@ class Settings {
 			'_bbpkr_upload_perms' => array(
 				'title'             => __( 'Upload Permission', 'bbpresskr' ),
 				'callback'          => array( __CLASS__, 'callback_upload_perms' ),
-				'sanitize_callback' => 'intval',
+				'sanitize_callback' => 'array_filter',
 				'args'              => array()
 			),
 
 			'_bbpkr_download_perms' => array(
 				'title'             => __( 'Download Permission', 'bbpresskr' ),
 				'callback'          => array( __CLASS__, 'callback_download_perms' ),
-				'sanitize_callback' => 'intval',
+				'sanitize_callback' => 'array_filter',
 				'args'              => array()
 			),
 
@@ -142,13 +142,6 @@ class Settings {
 
 	static function callback_upload_perms() {
 		self::callback_attachment_perms('upload', Attachments::$upload_perms);
-		return;
-?>
-
-	<input name="_bbpkr_allow_upload" id="_bbpkr_allow_upload" type="checkbox" value="1" <?php checked( get_option('_bbpkr_allow_upload') ); ?> />
-	<label for="_bbpkr_allow_upload"><?php esc_html_e( 'Allow users to upload files', 'bbpresskr' ); ?></label>
-
-<?php
 	}
 
 	static function callback_download_perms() {
@@ -158,19 +151,21 @@ class Settings {
 	static function callback_attachment_perms( $key, $default = array() ) {
 		$_user_roles = bbpresskr()->get_user_roles();
 		$allowed = (array) get_option( "_bbpkr_{$key}_perms", $default );
-		$field_name = "_bbpkr_<?php echo $key; ?>_perms[]";
+		$field_name = "_bbpkr_{$key}_perms[]";
 ?>
 	<div id="bbp-perms-<?php echo $key ?>">
 		<strong class="screen-reader-text"><?php printf( __('Allow %s to:', 'bbpresskr'), $key ); ?></strong>
 		<ul>
-		<?php 
+		<?php
 		foreach ($_user_roles as $role => $roledata) {
+			if ( $role == 'bbpkr_anonymous' && in_array($key, array('upload'/*, 'download'*/)) )
+				continue;
 			$field_id = "_bbpkr_{$key}_perms_{$role}";
 			$title = $roledata['name'];
 			?>
 			<li>
 				<label for="<?php echo $field_id; ?>">
-					<input type="checkbox" value="<?php echo $role; ?>" id="<?php echo $field_id; ?>" name="<?php echo $field_name; ?>[]"<?php checked(in_array($role, $allowed)) ?> />
+					<input type="checkbox" value="<?php echo $role; ?>" id="<?php echo $field_id; ?>" name="<?php echo $field_name; ?>"<?php checked(in_array($role, $allowed)) ?> />
 					<?php echo $title; ?>
 				</label>
 			</li>

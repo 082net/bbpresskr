@@ -74,24 +74,26 @@ class Core {
 	}
 
 	private function includes() {
-		require( BBPKR_INC . '/theme.php' );
-		require( BBPKR_INC . '/forum.php' );
-		require( BBPKR_INC . '/topic.php' );
-		require( BBPKR_INC . '/reply.php' );
+		// require( BBPKR_INC . '/theme.php' );
+		// require( BBPKR_INC . '/forum.php' );
+		// require( BBPKR_INC . '/topic.php' );
+		// require( BBPKR_INC . '/reply.php' );
 
-		require( BBPKR_INC . '/editor.php' );
-		require( BBPKR_INC . '/attachments.php' );
+		// require( BBPKR_INC . '/editor.php' );
+		// require( BBPKR_INC . '/attachments.php' );
 
-		require( BBPKR_INC . '/private.php' );
-		require( BBPKR_INC . '/permissions.php' );
-		require( BBPKR_INC . '/forum-roles.php' );
-		require( BBPKR_INC . '/meta.php' );
+		// require( BBPKR_INC . '/private.php' );
+		// require( BBPKR_INC . '/permissions.php' );
+		// require( BBPKR_INC . '/forum-roles.php' );
+		// require( BBPKR_INC . '/meta.php' );
 
 		// require( BBPKR_LIB . '/meta.php' );
-		require( BBPKR_LIB . '/view.php' );
+		// require( BBPKR_LIB . '/view.php' );
 
-		if ( is_admin() )
-			require_once( BBPKR_PATH . '/admin/init.php' );
+		if ( is_admin() ) {
+			// require_once( BBPKR_PATH . '/admin/init.php' );
+			Admin::init();
+		}
 
 		/*if ( !defined('GDBBPRESSATTACHMENTS_PATH' ) ) {
 			require_once( BBPKR_LIB . '/gd-bbpress-attachments/gd-bbpress-attachments.php');
@@ -116,15 +118,50 @@ class Core {
 
 		// Add the actions
 		foreach ( $actions as $class_action )
-			add_action( 'bbp_' . $class_action, array( $this, $class_action ), 7 );
+			add_action( 'bbp_' . $class_action, array(&$this, $class_action ), 7 );
 
 
-		add_action( 'wp_enqueue_scripts', array( &$this, 'wp_enqueue_styles' ), 11 );
-		add_action( 'wp_enqueue_scripts', array( &$this, 'wp_enqueue_scripts' ), 11 );
+		add_action( 'setup_theme', array(&$this, 'setup_theme') );
 
-		add_filter( 'bbp_default_styles', array( &$this, 'bbp_default_styles') );
+		add_action( 'after_setup_theme', array(&$this, 'after_setup_theme') );
 
-		add_filter( 'bbp_body_class', array( &$this, 'body_class' ), 10, 2 );
+		add_action( 'init', array(&$this, 'wp_init') );
+
+		add_action( 'template_redirect', array(&$this, 'template_redirect') );
+
+		do_action('_bbpkr_setup_actions');
+
+	}
+
+	function setup_theme() {
+		Theme::init();
+
+	}
+
+	function after_setup_theme() {
+		Topic::init();
+
+		Forum\Roles::init();
+
+		Attachments::init();
+	}
+
+	function wp_init() {
+		Permissions::init();
+
+		Meta::init();
+	}
+
+	function template_redirect() {
+		Forum::init();
+
+		Reply::init();
+
+		Editor::init();
+
+		Nav_Menu::init();
+
+		add_filter( 'bbp_get_forum_id', array( &$this, 'get_forum_id' ) );
 
 		do_action( 'bbpkr_setup_actions' );
 	}
@@ -148,6 +185,22 @@ class Core {
 
 	function forum_option($option, $forum_id=0) {
 		return Forum::option( $option, $forum_id );
+	}
+
+	function is_admin() {
+		$doing_ajax = (defined('DOING_AJAX') && DOING_AJAX);
+		return is_admin() && !$doing_ajax;
+	}
+
+	function get_forum_id($forum_id) {
+		if ( !$forum_id ) {
+			if ( bbp_is_topic_edit() ) {
+				$forum_id = bbp_get_topic_forum_id();
+			} elseif ( bbp_is_single_reply() || bbp_is_reply_edit() ) {
+				$forum_id = bbp_get_reply_forum_id();
+			}
+		}
+		return $forum_id;
 	}
 
 	function get_user_roles() {
@@ -205,9 +258,6 @@ class Core {
 		add_rewrite_tag( '%' . bbp_get_write_rewrite_id()               . '%', '([1]{1,})' ); // Edit Page tag
 	}
 
-	public function after_setup_theme() {
-	}
-
 	public static function meta_params($forum_id, $admin=false) {
 		if ( ! bbp_is_forum($forum_id) )
 			return array();
@@ -240,45 +290,6 @@ class Core {
 			ksort($meta);
 		}
 		return $meta;
-	}
-
-	public function wp_enqueue_styles() {
-		if ( wp_style_is( 'fontawesome' ) )
-			$fontawesome = 'fontawesome';
-		elseif ( wp_style_is( 'font-awesome' ) )
-			$fontawesome = 'font-awesome';
-		else {
-			wp_register_style( 'font-awesome', $this->url . '/assets/font-awesome/css/font-awesome.min.css', array(), '4.3' );
-			$fontawesome = 'font-awesome';
-		}
-
-		wp_enqueue_style( $fontawesome );
-
-		if ( wp_style_is( 'genericons' ) )
-			wp_enqueue_style( 'genericons' );
-		else
-			wp_enqueue_style( 'genericons', $this->url . '/assets/genericons/genericons.css', array(), '3.2' );
-		// wp_enqueue_style( 'bbpresskr', )
-	}
-
-	public function wp_enqueue_scripts() {
-
-	}
-
-	public function bbp_default_styles( $styles ) {
-		$styles['bbp-default'] = array(
-			// 'file'         => 'css/bbpresskr.css',
-			'file'         => 'css/default.css',
-			'dependencies' => array('buttons')//array( 'bbp-default' )
-		);
-		return $styles;
-	}
-
-	public static function body_class( $classes, $bbp_classes ) {
-		if ( in_array('bbpress', $bbp_classes) ) {
-			$classes[] = 'bbpresskr';
-		}
-		return $classes;
 	}
 
 }

@@ -13,15 +13,13 @@ class Topic {
 
 	public static function init() {
 		add_action( 'bbpkr_setup_actions', array( __CLASS__, 'setup_actions' ) );
-		require( BBPKR_INC . '/topic-views-counter.php' );
+		// require( BBPKR_INC . '/topic-views-counter.php' );
 		Topic\Views_Counter::init();
 	}
 
 	public static function setup_actions() {
 		add_action( 'parse_query', array( __CLASS__, 'parse_query' ), 3 ); // Early for overrides
 
-		// add_post_type_support( bbp_get_forum_post_type(), 'custom-fields' );
-		add_action( 'save_post_' . bbp_get_topic_post_type(), array( __CLASS__, 'set_topic_no' ), 10, 2 );
 
 		// setup topic list table
 		add_filter( 'bbp_after_has_topics_parse_args', array( __CLASS__, 'setup_topic_list_table' ), 3 );
@@ -33,8 +31,11 @@ class Topic {
 
 		add_filter( 'bbp_before_get_user_subscribe_link_parse_args', array( __CLASS__, 'user_subscribe_link_parse_args' ) );
 
-		add_action( 'bbp_init', array( __CLASS__, 'remove_attachments_embed' ), 88.88 );
-
+		// order topics by the latest not freshness
+		if ( get_option('_bbpkr_topic_order_latest') ) {
+			// add_action( 'bbp_init', array(__CLASS__, 'register_topic_order') );
+			self::register_topic_order();
+		}
 	}
 
 	public static function parse_query( $posts_query ) {
@@ -73,6 +74,10 @@ class Topic {
 		}
 	}
 
+	public static function register_topic_order() {
+		add_filter( 'bbp_before_has_topics_parse_args', array(__CLASS__, 'has_topics_parse_args') );
+	}
+
 	public static function setup_topic_list_table( $r ) {
 		if ( is_main_query() && !isset(bbpresskr()->topic_list_table) /*&& is_numeric($r['post_parent'])*/ ) {
 			require_once( BBPKR_LIB . '/list-table.php' );
@@ -80,28 +85,6 @@ class Topic {
 			return bbpresskr()->topic_list_table->_topic_args;
 		}
 		return $r;
-	}
-
-	public static function set_topic_no($post_ID, $post) {
-		global $wpdb;
-		if ( $post->menu_order > 0 || $post->post_status != 'publish' )
-			return;
-
-		$forum_id = bbp_get_topic_forum_id($post_ID);
-		$nextNo = self::get_next_topic_no($forum_id);
-		if ( $nextNo )
-			$wpdb->update( $wpdb->posts, array('menu_order' => $nextNo), array('ID' => $post_ID) );
-	}
-
-	public static function get_next_topic_no( $forum_id=0 ) {
-		global $wpdb;
-		$forum_id = bbp_get_forum_id( $forum_id );
-		if ( !$forum_id )
-			return false;
-
-		$nextQ = $wpdb->prepare("SELECT MAX(menu_order) FROM $wpdb->posts WHERE post_type LIKE %s AND post_parent=%d", bbp_get_topic_post_type(), $forum_id);
-		$nextNo = (int) $wpdb->get_var($nextQ);
-		return $nextNo + 1;
 	}
 
 	public static function comments_open($open, $post_id) {
@@ -142,14 +125,6 @@ class Topic {
 		if ( !$open )
 			return BBPKR_PATH . '/inc/blank-comments.php';
 		return $file;
-	}
-
-	public static function remove_attachments_embed() {
-		global $gdbbpress_attachments_front;
-		if ( ! is_a( $gdbbpress_attachments_front, 'gdbbAtt_Front' ) )
-			return;
-
-		remove_filter('bbp_get_topic_content', array(&$gdbbpress_attachments_front, 'embed_attachments'), 100, 2);
 	}
 
 	public static function topic_admin_links( $retval, $r, $args ) {
@@ -201,4 +176,4 @@ class Topic {
 
 }
 
-Topic::init();
+// Topic::init();

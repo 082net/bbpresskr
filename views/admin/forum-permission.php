@@ -2,7 +2,7 @@
 /**
  * Forum permissions tab
  * read, write, reply, upload
- * 
+ *
  * @package bbPressKR
  * @subpackage Admin
  * @copyright 2014-2015 082NeT(082net@gmail.com)
@@ -38,8 +38,10 @@ if ( !defined('BBPKR_PATH') ) die('HACK');
 	<div id="bbp-perms-<?php echo $key ?>" class="bbpkr-tab-content">
 		<strong class="screen-reader-text"><?php _e('Allow to', 'bbpresskr'); ?></strong>
 		<ul>
-		<?php 
+		<?php
 		foreach ($_user_roles as $role => $roledata) {
+			if ( $role == 'bbpkr_anonymous' && in_array($key, array('upload'/*, 'download'*/)) )
+				continue;
 		$title = $roledata['name'];
 		?>
 		<li>
