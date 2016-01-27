@@ -96,6 +96,18 @@
 	margin-top: 0;
 }
 
+#bbpress-forums pre {
+  border: 1px solid #e8e8e8;
+  font-size: 1rem;
+  line-height: 1.3125;
+  margin: 0 0 1.75em;
+  max-width: 100%;
+  overflow: auto;
+  padding: 1.75em;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  background-color: #e8e8e8;
+}
 
 #bbpress-forums div.mce-toolbar-grp {
 	padding: 4px 0;
