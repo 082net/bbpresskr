@@ -3,7 +3,7 @@
  * @package bbPressKR
  * @subpackage List_Table
  * @copyright 2014-2015 082NeT(082net@gmail.com)
- * 
+ *
  * @ref wp-admin/includes/class-wp-list-table.php
  */
 
@@ -62,8 +62,8 @@ class List_Table {
 
 		// override query vars
 		$this->_topic_args = array_merge( $r, array(
-			'meta_key' => null,
-			'orderby' => 'post_date',
+			// 'meta_key' => null,
+			// 'orderby' => 'post_date',
 			'posts_per_page' => $this->forum_op['posts_per_page'],
 		) );
 
@@ -507,7 +507,7 @@ class List_Table {
 		$can_edit_post = false;// current_user_can( 'edit_post', $post->ID );
 
 		$alternate = 'alternate' == $alternate ? '' : 'alternate';
-		$classes = array( $alternate, 'level-0' ); 
+		$classes = array( $alternate, 'level-0' );
 
 	?>
 		<tr id="topic-row-<?php echo $post->ID; ?>" <?php bbp_topic_class( $post->ID, $classes ) ?>>

@@ -32,8 +32,8 @@ class Attachments {
   }
 
   private static function includes() {
-    if ( !class_exists('WP_DMGR') )
-      require_once( BBPKR_LIB . '/download-mgr/download-mgr.php' );
+    // if ( !class_exists('WP_DMGR') )
+    //   require_once( BBPKR_LIB . '/download-mgr/download-mgr.php' );
   }
 
   private static function setup() {
@@ -238,7 +238,7 @@ class Attachments {
 
     $attachment = get_post( $file_id );
 
-    if ( self::can_download($attachment) ) {
+    if ( !self::can_download($attachment) ) {
       if(!self::$conf['show_msgs'])
         return; // just go to blog home
       if( is_user_logged_in() ) { // is user but wrong level

@@ -77,6 +77,14 @@ class Topic {
 		add_filter( 'bbp_before_has_topics_parse_args', array(__CLASS__, 'has_topics_parse_args') );
 	}
 
+	public static function has_topics_parse_args($r) {
+		if ( get_option('_bbpkr_topic_order_latest') ) {
+			// $r['orderby'] = NULL;
+			$r['meta_key'] = NULL;
+		}
+		return $r;
+	}
+
 	public static function setup_topic_list_table( $r ) {
 		if ( is_main_query() && !isset(bbpresskr()->topic_list_table) /*&& is_numeric($r['post_parent'])*/ ) {
 			require_once( BBPKR_LIB . '/list-table.php' );

@@ -34,12 +34,26 @@ class Settings {
 	static function settings_fields( $fields ) {
 		$features = array(
 
-			'_bbpkr_disable_autop' => array(
+			'_bbpkr_topic_editor_settings' => array(
+				'title'							=> __( 'Topic Editor settings', 'bbpresskr' ),
+				'callback'					=> array(__CLASS__, 'callback_editor_settings'),
+				'sanitize_callback'	=> array(__CLASS__, 'sanitize_editor_settings'),
+				'args'							=> 'topic',
+			),
+
+			'_bbpkr_reply_editor_settings' => array(
+				'title'							=> __( 'Rely editor settings', 'bbpresskr' ),
+				'callback'					=> array(__CLASS__, 'callback_editor_settings'),
+				'sanitize_callback'	=> array(__CLASS__, 'sanitize_editor_settings'),
+				'args'							=> 'reply',
+			),
+
+			/*'_bbpkr_disable_autop' => array(
 				'title'             => __( 'Disable autoP', 'bbpresskr' ),
 				'callback'          => array( __CLASS__, 'callback_disable_autop' ),
 				'sanitize_callback' => 'intval',
 				'args'              => array()
-			),
+			),*/
 
 			/*'_bbpkr_media_buttons' => array(
 				'title'             => __( 'WordPress media button', 'bbpress' ),
@@ -48,12 +62,12 @@ class Settings {
 				'args'              => array()
 			),*/
 
-			'_bbpkr_textarea_rows' => array(
+			/*'_bbpkr_textarea_rows' => array(
 				'title'             => __( 'Editor rows', 'bbpresskr' ),
 				'callback'          => array( __CLASS__, 'callback_textarea_rows' ),
 				'sanitize_callback' => 'intval',
 				'args'              => array()
-			),
+			),*/
 
 			/*'_bbpkr_tinymce' => array(
 				'title'             => __( 'Use visual editor', 'bbpresskr' ),
@@ -76,7 +90,7 @@ class Settings {
 				'args'              => array()
 			),
 
-			'_bbpkr_show_recent_topics' => array(
+			'_bbpkr_topic_order_latest' => array(
 				'title'             => __( 'Topics order by date', 'bbpresskr' ),
 				'callback'          => array( __CLASS__, 'callback_show_recent_topics' ),
 				'sanitize_callback' => 'intval',
@@ -104,20 +118,64 @@ class Settings {
 		return $fields;
 	}
 
-	static function callback_disable_autop() {
-?>
-
-	<input name="_bbpkr_disable_autop" id="_bbpkr_disable_autop" type="checkbox" value="1" <?php checked( get_option('_bbpkr_disable_autop') ); ?> />
-	<label for="_bbpkr_disable_autop"><?php esc_html_e( 'Stop adding the &lt;p&gt; and &lt;br /&gt; tags when saving topics', 'bbpresskr' ); ?></label>
-
-<?php
+	static function sanitize_editor_settings($value) {
+		$value['textarea_rows'] = (int) $value['textarea_rows'];
+		foreach ( array('tinymce', 'quicktags', 'teeny') as $chk ) {
+			if ( !isset($value[$chk]) )
+				$value[$chk] = false;
+		}
+		return $value;
 	}
 
-	static function callback_textarea_rows() {
-?>
+	static function field_id($option, $type='topic', $echo=true) {
+		$name = "_bbpkr_{$type}_editor_settings";
+		$retval = $name . '_' . $option;
+		if ( $echo )
+			echo $retval;
+		return $retval;
+	}
 
-	<input name="_bbpkr_textarea_rows" id="_bbpkr_textarea_rows" type="number" min="5" step="1" value="<?php bbp_form_option( '_bbpkr_textarea_rows', 20 ); ?>" class="small-text" />
-	<label for="_bbpkr_textarea_rows"><?php esc_html_e( 'rows', 'bbpresskr' ); ?></label>
+	static function field_name($option, $type='topic', $echo=true) {
+		$name = "_bbpkr_{$type}_editor_settings";
+		$retval = $name . '[' . $option . ']';
+		if ( $echo )
+			echo $retval;
+		return $retval;
+	}
+
+	static function callback_editor_settings($type = 'topic') {
+		$settings = (array) get_option("_bbpkr_{$type}_editor_settings", bbPressKr\Editor::defaults($type));
+		?>
+	<p>
+		<label for="<?php self::field_id('textarea_rows', $type) ?>"><?php _e( 'Editor rows:', 'bbpresskr' ) ?></label>
+		<input name="<?php self::field_name('textarea_rows', $type) ?>" id="<?php self::field_id('textarea_rows', $type) ?>" type="number" min="5" step="1" value="<?php echo (int) $settings['textarea_rows']; ?>" class="small-text" />
+		<span><?php esc_html_e( 'rows', 'bbpresskr' ); ?></span>
+	</p>
+
+	<p>
+		<label for="<?php self::field_id('tinymce', $type) ?>"><?php _e( 'Use visual editor:', 'bbpresskr' ) ?></label>
+		<input name="<?php self::field_name('tinymce', $type) ?>" id="<?php self::field_id('tinymce', $type) ?>" type="checkbox" value="1" <?php checked( $settings['tinymce'] ); ?> />
+		<span class="description"><?php esc_html_e( '(Show visual editor[TinyMCE] durning write topic)', 'bbpresskr' ); ?></span>
+	</p>
+
+	<p>
+		<label for="<?php self::field_id('teeny', $type) ?>"><?php _e( 'Teeny buttons:', 'bbpresskr' ) ?></label>
+		<input name="<?php self::field_name('teeny', $type) ?>" id="<?php self::field_id('teeny', $type) ?>" type="checkbox" value="1" <?php checked( $settings['teeny'] ); ?> />
+		<span class="description"><?php esc_html_e( '(Teeny buttons on visual editor)', 'bbpresskr' ); ?></span>
+	</p>
+
+	<p>
+		<label for="<?php self::field_id('quicktags', $type) ?>"><?php _e( 'Use text editor:', 'bbpresskr' ) ?></label>
+		<input name="<?php self::field_name('quicktags', $type) ?>" id="<?php self::field_id('quicktags', $type) ?>" type="checkbox" value="1" <?php checked( $settings['quicktags'] ); ?> />
+		<span class="description"><?php esc_html_e( '(Show visual editor durning write reply)', 'bbpresskr' ); ?></span>
+	</p>
+		<?php
+	}
+
+	static function callback_disable_autop() {
+?>
+	<input name="_bbpkr_disable_autop" id="_bbpkr_disable_autop" type="checkbox" value="1" <?php checked( get_option('_bbpkr_disable_autop') ); ?> />
+	<label for="_bbpkr_disable_autop"><?php esc_html_e( 'Stop adding the &lt;p&gt; and &lt;br /&gt; tags when saving topics', 'bbpresskr' ); ?></label>
 
 <?php
 	}
@@ -134,8 +192,8 @@ class Settings {
 	static function callback_show_recent_topics() {
 ?>
 
-	<input name="_bbpkr_show_recent_topics" id="_bbpkr_show_recent_topics" type="checkbox" value="1" <?php checked( get_option('_bbpkr_show_recent_topics') ); ?> />
-	<label for="_bbpkr_show_recent_topics"><?php esc_html_e( 'Order topics by the latest, not freshness', 'bbpresskr' ); ?></label>
+	<input name="_bbpkr_topic_order_latest" id="_bbpkr_topic_order_latest" type="checkbox" value="1" <?php checked( get_option('_bbpkr_topic_order_latest') ); ?> />
+	<label for="_bbpkr_topic_order_latest"><?php esc_html_e( 'Order topics by the latest, not freshness', 'bbpresskr' ); ?></label>
 
 <?php
 	}

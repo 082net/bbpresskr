@@ -16,13 +16,21 @@ class Editor {
 
 	protected static $defaults = array(
 		'wpautop' => true,
-		'media_buttons' => false,
-		'textarea_rows' => '6',
+		// 'media_buttons' => false,
+		'textarea_rows' => '20',
 		'tinymce' => true,
 		'quicktags' => true,
 		'teeny' => true,
 		'more_html_tags' => false,
 		'topic_orderby' => '',
+	);
+
+	protected static $reply_defaults = array(
+		// 'media_buttons' => false,
+		'textarea_rows' => '6',
+		'tinymce' => false,
+		'quicktags' => false,
+		'teeny' => true,
 	);
 
 	public static function init() {
@@ -48,36 +56,19 @@ class Editor {
 		return do_shortcode( $content );
 	}
 
-	public static function has_topics_parse_args($r) {
-		if ( get_option('_bbpkr_topic_order_latest') ) {
-			$r['orderby'] = NULL;
-			$r['meta_key'] = NULL;
-		}
-		return $r;
+	static function defaults($type='topic') {
+		if ( $type == 'reply' )
+			return self::$reply_defaults;
+		return self::$defaults;
 	}
 
 	public static function editor_args($args) {
 		if ( !isset($args['context']) || $args['context'] == 'topic' ) {
-			/*$upload_files = current_user_can('upload_files');
-			if ( !$upload_files ) {
-				$upload_files = Permissions::upload_files($upload_files);
-			}*/
-			$settings = array(
-				'media_buttons' => current_user_can('upload_files'),
-				'textarea_rows' => (int) get_option('_bbpkr_textarea_rows', 20),
-				'tinymce' => get_option('_bbpkr_topic_tinymce', true),
-				'quicktags' => get_option('_bbpkr_topic_quicktags', true),
-				'teeny' => true,
-				// 'drag_drop_upload' => true,
-			);
+			$settings = array_merge( self::$defaults, (array) get_option('_bbpkr_topic_editor_settings') );
+			$settings['media_buttons'] = current_user_can('upload_files');
 		} elseif ( isset($args['context']) && $args['context'] == 'reply' ) {
-			$settings = array(
-				'media_buttons' => false,
-				'textarea_rows' => (int) get_option('_bbpkr_textarea_rows_reply', 6),
-				'tinymce' => get_option('_bbpkr_reply_tinymce', false),
-				'quicktags' => get_option('_bbpkr_reply_quicktags', false),
-				'teeny' => true,
-			);
+			$settings = array_merge( self::$reply_defaults, (array) get_option('_bbpkr_reply_editor_settings') );
+			$settings['media_buttons'] = false;
 		}
 
 		$args = array_merge($settings, $args);// do not override given arguments
